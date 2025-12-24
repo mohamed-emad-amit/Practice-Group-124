@@ -1,0 +1,37 @@
+// Imports
+const { rateLimit } = require("express-rate-limit");
+const express = require("express");
+const dotenv = require("dotenv");
+const path = require("path");
+
+// Config
+dotenv.config();
+
+// Imports Routes
+const { errorMiddleware } = require("./middlewares/errorMiddleware");
+const userRoutes = require("./routes/userRoutes");
+
+// Generated Middleware
+const limiter = rateLimit({ limit: 100, windowMs: 1000 * 60 * 15 });
+
+// System Variable
+const app = express();
+const PORT = process.env.PORT ?? 3000;
+
+// Global Middlware
+app.use(express.json());
+app.use(limiter);
+
+// Serve Static Files
+app.use("/views", express.static(path.join(__dirname, "views")));
+
+// Routes
+app.use("/api/users", userRoutes); // [] {} error
+
+// Handle Error Middleware
+app.use(errorMiddleware);
+
+// Run Server
+app.listen(PORT, function () {
+  console.log(`SERVER RUNNING @PORT: ${PORT}`);
+});
