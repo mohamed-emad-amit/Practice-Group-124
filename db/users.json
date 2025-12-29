@@ -1,1 +1,1 @@
-[{"id":2,"email":"admin@gmail.com","password":"admin_pass_123"}]
+[{"id":2,"email":"admin@gmail.com","password":"admin_pass_123"},{"id":2,"email":"admin_1@gmail.com","password":"$2b$12$j7Qi/vP/kRczIP7yabNUXeuzoyrdUx/Dj4XYEiF7a3jPlHWP3lKXO"},{"email":"admin_0@gmail.com","password":"$2b$12$IZkNc6nORxGujybdrMGWSeVlHTgAzjqSLiifefUw/ncjR51bdOL4.","username":"admin","salary":20000,"hireDate":"2024-12-12T00:00:00.000Z","role":"customer","id":3}]

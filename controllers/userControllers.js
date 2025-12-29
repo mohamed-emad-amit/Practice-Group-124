@@ -2,7 +2,10 @@
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { createUserSchema } = require("../validations/userValidations");
+const {
+  createUserSchema,
+  idSchema,
+} = require("../validations/userValidations");
 
 // Database
 let users = [];
@@ -30,6 +33,14 @@ function findAll(request, response) {
 }
 
 function findOne(request, response, next) {
+  // Validate Data
+  const { value, error } = idSchema.validate(request.params);
+
+  if (error) {
+    error.status = 400;
+    return next(error);
+  }
+
   // ID
   const id = request.params.id;
   // Check User: ID
@@ -47,13 +58,19 @@ function findOne(request, response, next) {
 
 async function createUser(request, response, next) {
   // Data
-  const { error } = createUserSchema.validate(request.body);
+  const { value, error } = createUserSchema.validate(request.body, {
+    abortEarly: false,
+  });
 
   if (error) {
-    return response.status(400).json({ message: error.message });
+    const messages = error.details.map((err) => err.message);
+
+    error.message = messages;
+
+    return next(error);
   }
 
-  const { email, password } = request.body;
+  const { email, password } = value;
 
   // Email Unique
   let user = users.find((item) => item.email == email);
@@ -69,7 +86,7 @@ async function createUser(request, response, next) {
   const hashedPassword = await bcrypt.hash(password, 12);
 
   // Create
-  user = { id: users.length + 1, email, password: hashedPassword };
+  user = { ...value, id: users.length + 1, password: hashedPassword };
   // Push
   users.push(user);
 
@@ -81,6 +98,14 @@ async function createUser(request, response, next) {
 // [TODO]: UPDATE -> FILE
 function updateUser(request, response) {}
 function removeUser(request, response, next) {
+  // Validate Data
+  const { error } = idSchema.validate(request.params);
+
+  if (error) {
+    error.status = 400;
+    return next(error);
+  }
+
   // ID
   const id = request.params.id;
   // Check Exist ? Delete : Error

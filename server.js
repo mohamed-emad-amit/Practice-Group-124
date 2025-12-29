@@ -2,6 +2,8 @@
 const { rateLimit } = require("express-rate-limit");
 const express = require("express");
 const dotenv = require("dotenv");
+const jsend = require("jsend");
+const cors = require("cors");
 const path = require("path");
 
 // Config
@@ -21,6 +23,11 @@ const PORT = process.env.PORT ?? 3000;
 // Global Middlware
 app.use(express.json());
 app.use(limiter);
+
+app.use(jsend.middleware);
+
+// Enable Cors
+app.use(cors({ origin: process.env.CLIENT_URL }));
 
 // Serve Static Files
 app.use("/views", express.static(path.join(__dirname, "views")));
