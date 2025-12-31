@@ -6,6 +6,7 @@ const {
   createUserSchema,
   idSchema,
 } = require("../validations/userValidations");
+const { sendMail } = require("../utils/mailService");
 
 // Database
 let users = [];
@@ -57,46 +58,112 @@ function findOne(request, response, next) {
 }
 
 async function createUser(request, response, next) {
-  // Data
-  const { value, error } = createUserSchema.validate(request.body, {
-    abortEarly: false,
-  });
+  try {
+    // Data
+    const { value, error } = createUserSchema.validate(request.body, {
+      abortEarly: false,
+    });
+
+    if (error) {
+      const messages = error.details.map((err) => err.message);
+
+      error.message = messages;
+
+      return next(error);
+    }
+
+    const { email, password } = value;
+
+    // Email Unique
+    let user = users.find((item) => item.email == email);
+
+    // if (user) {
+    //   const error = new Error("Email Already Exist!");
+    //   error.status = 409;
+
+    //   return next(error);
+    // }
+
+    // Hash
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Single File
+    const avatar = request.files?.avatar[0]?.path ?? "uploads/avatar.png";
+
+    // Array of Files
+    const docs = request.files?.docs?.map((file) => file.path) ?? [];
+
+    // Create
+    user = {
+      ...value,
+      id: users.length + 1,
+      password: hashedPassword,
+      avatar,
+      docs,
+    };
+    // Push
+    users.push(user);
+
+    // Update File
+    fs.writeFileSync(userFilePath, JSON.stringify(users));
+
+    // Send Notification
+    sendMail(email, "Welcome To Our First API", "Notification");
+
+    console.log(user);
+    response.status(201).json({ message: "User Create", data: { user } });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+}
+// [TODO]: UPDATE -> FILE
+// [TODO]: Send Notification
+// [TODO]: UPDATE avatar 10m
+
+function updateUser(request, response) {}
+
+function updateAvatar(request, response, next) {
+  // Get New Avatar
+  const avatar = request.file.path;
+
+  // Validate ID
+  const { error } = idSchema.validate(request.params);
 
   if (error) {
-    const messages = error.details.map((err) => err.message);
-
-    error.message = messages;
+    error.status = 400;
 
     return next(error);
   }
 
-  const { email, password } = value;
+  // Get ID Params
+  const id = request.params.id;
 
-  // Email Unique
-  let user = users.find((item) => item.email == email);
+  // Get User
+  const userIndex = users.findIndex((user) => user.id == id);
 
-  if (user) {
-    const error = new Error("Email Already Exist!");
-    error.status = 409;
+  // Validate User
+  if (userIndex == -1) {
+    const error = new Error("User Not Found!");
+    error.status = 404;
 
     return next(error);
   }
 
-  // Hash
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  // Create
-  user = { ...value, id: users.length + 1, password: hashedPassword };
-  // Push
-  users.push(user);
+  // Update
+  users[userIndex].avatar = avatar;
 
   // Update File
   fs.writeFileSync(userFilePath, JSON.stringify(users));
 
-  response.status(201).json({ message: "User Create", data: { user } });
+  response.json({
+    message: "User Avatar Updated Successfully!",
+    data: {
+      user: users[userIndex],
+    },
+  });
 }
-// [TODO]: UPDATE -> FILE
-function updateUser(request, response) {}
+
 function removeUser(request, response, next) {
   // Validate Data
   const { error } = idSchema.validate(request.params);
@@ -135,4 +202,5 @@ module.exports = {
   createUser,
   updateUser,
   removeUser,
+  updateAvatar,
 };
