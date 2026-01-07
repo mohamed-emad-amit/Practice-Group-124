@@ -2,11 +2,16 @@
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const dotenv = require("dotenv");
+const jwt = require("jsonwebtoken");
 const {
   createUserSchema,
   idSchema,
 } = require("../validations/userValidations");
 const { sendMail } = require("../utils/mailService");
+
+// Config
+dotenv.config();
 
 // Database
 let users = [];
@@ -77,12 +82,12 @@ async function createUser(request, response, next) {
     // Email Unique
     let user = users.find((item) => item.email == email);
 
-    // if (user) {
-    //   const error = new Error("Email Already Exist!");
-    //   error.status = 409;
+    if (user) {
+      const error = new Error("Email Already Exist!");
+      error.status = 409;
 
-    //   return next(error);
-    // }
+      return next(error);
+    }
 
     // Hash
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -100,6 +105,7 @@ async function createUser(request, response, next) {
       password: hashedPassword,
       avatar,
       docs,
+      role: "admin",
     };
     // Push
     users.push(user);
@@ -110,8 +116,14 @@ async function createUser(request, response, next) {
     // Send Notification
     sendMail(email, "Welcome To Our First API", "Notification");
 
-    console.log(user);
-    response.status(201).json({ message: "User Create", data: { user } });
+    // Generate Token
+    const payload = { id: user.id, role: user.role };
+    const secret = process.env.JWT_SECRET ?? "secret";
+    const expiresIn = process.env.JWT_EXPIRES_IN ?? "1h";
+
+    const token = jwt.sign(payload, secret, { expiresIn });
+
+    response.status(201).json({ message: "User Create", data: { token } });
   } catch (error) {
     console.log(error);
     next(error);
@@ -165,6 +177,8 @@ function updateAvatar(request, response, next) {
 }
 
 function removeUser(request, response, next) {
+  console.log(request.user);
+
   // Validate Data
   const { error } = idSchema.validate(request.params);
 
@@ -195,6 +209,18 @@ function removeUser(request, response, next) {
   response.json({ message: "User Deleted Successfully!", data: null });
 }
 
+// Get Current User And Return Information
+async function getMe(request, response, next) {
+  const userId = request.user.id;
+
+  const user = users.find((u) => u.id == userId);
+  if (!user) {
+    return response.status(404).json({ message: "User Not Found!" });
+  }
+
+  response.json({ message: "User Profile", data: { user } });
+}
+
 // CRUD
 module.exports = {
   findAll,
@@ -203,4 +229,6 @@ module.exports = {
   updateUser,
   removeUser,
   updateAvatar,
+
+  getMe,
 };

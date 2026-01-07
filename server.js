@@ -10,10 +10,11 @@ const path = require("path");
 dotenv.config();
 
 // Imports Routes
-const { errorMiddleware } = require("./middlewares/errorMiddleware");
+const productRoutes = require("./routes/productRoutes");
 const userRoutes = require("./routes/userRoutes");
 
 // Generated Middleware
+const { errorMiddleware } = require("./middlewares/errorMiddleware");
 const limiter = rateLimit({ limit: 100, windowMs: 1000 * 60 * 15 });
 
 // System Variable
@@ -34,6 +35,7 @@ app.use("/views", express.static(path.join(__dirname, "views")));
 
 // Routes
 app.use("/api/users", userRoutes); // [] {} error
+app.use("/api/products", productRoutes);
 
 // Handle Error Middleware
 app.use(errorMiddleware);
